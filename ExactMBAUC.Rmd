@@ -1,0 +1,722 @@
+---
+title: "Exact Solution Model Area"
+author: "Shawn Gilroy"
+date: "October 22, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE,
+                      fig.path = "plots/",
+                      dev = c("png"),
+                      dpi = 500)
+
+require(ggplot2)
+require(grid)
+require(gridExtra)
+require(dplyr)
+require(tidyr)
+require(knitr)
+
+#devtools::install_github("miyamot0/discountingtools")
+require(discountingtools)
+
+#file <- read.csv("Sim Comparisons.csv", stringsAsFactors = FALSE)
+
+mVars = read.csv("Sim Comparisons.csv", stringsAsFactors = FALSE)
+
+```
+
+### Table 1. Relationships between measures
+
+``` {r, SimulationResults, echo=FALSE, warning=FALSE, results="asis"}
+
+tableDiffs <- mVars %>%
+  summarise(Model = "Overall",
+            W = wilcox.test(NI.AUC, Exact.AUC, correct = FALSE)$statistic,
+            p = wilcox.test(NI.AUC, Exact.AUC, correct = FALSE)$p.value,
+            rho = cor.test(NI.AUC, Exact.AUC, method="spearman")$estimate)
+
+tableDiffsByModel <- mVars %>%
+  group_by(Model) %>%
+  summarise(W = wilcox.test(NI.AUC, Exact.AUC, correct = FALSE)$statistic,
+            p = wilcox.test(NI.AUC, Exact.AUC, correct = FALSE)$p.value,
+            rho = cor.test(NI.AUC, Exact.AUC, method="spearman")$estimate)
+
+tableDiffsAll <- rbind(tableDiffs, tableDiffsByModel)
+
+kable(tableDiffsAll)
+
+```
+
+This table provides the results from exact solution MB-AUC. The MB-AUC area measure is derived from two delays of interest (T1 = 7; T2 = 1825), the maximum value of the commodity (A), and the fitted model parameters.
+
+### Figure 1
+
+```{r, Figure_1, echo=FALSE, warning=FALSE, cache=TRUE, fig.align="center", fig.height=5, fig.width=9 }
+xLabels <- c(1,NA,NA,365,1825,3650, NA, NA)
+xLabels2 <- c(1,NA,NA,365,1825,3650, 7300, NA)
+xLabels3 <- c(1,NA,NA,365,1825,3650, 7300, 14600)
+
+xDelays <- c(1,30,180,365,1825,3650, 7300, 14600)
+
+dataFrame <- data.frame(X=xDelays,
+                        Y=c(945,855,845,750,636,274,NA,NA))
+
+dataFrame2 <- data.frame(X=xDelays,
+                         Y=c(945,855,845,750,636,274,274,NA))
+
+dataFrame3 <- data.frame(X=xDelays,
+                         Y=c(945,855,845,750,636,274,274,274))
+
+annotateMessage = sprintf("Maximum Area = (%s - %s) * 1000 = %s", 3650, 1, (3650-1) * 1000)
+
+plotDraw <- ggplot(dataFrame, aes(x=X, y=Y, fill="gray")) +
+  geom_line(size=1, linetype=1) +
+  geom_area() +
+  geom_point() +
+  scale_fill_manual(values = c('gray')) +
+  geom_segment(aes(x = dataFrame$X[1], y = 0, xend = dataFrame$X[1], yend = dataFrame$Y[1], colour = "black")) +
+  geom_segment(aes(x = dataFrame$X[2], y = 0, xend = dataFrame$X[2], yend = dataFrame$Y[2], colour = "black")) +
+  geom_segment(aes(x = dataFrame$X[3], y = 0, xend = dataFrame$X[3], yend = dataFrame$Y[3], colour = "black")) +
+  geom_segment(aes(x = dataFrame$X[4], y = 0, xend = dataFrame$X[4], yend = dataFrame$Y[4], colour = "black")) +
+  geom_segment(aes(x = dataFrame$X[5], y = 0, xend = dataFrame$X[5], yend = dataFrame$Y[5], colour = "black")) +
+  geom_segment(aes(x = dataFrame$X[6], y = 0, xend = dataFrame$X[6], yend = dataFrame$Y[6], colour = "black")) +
+  geom_segment(aes(x = dataFrame$X[7], y = 0, xend = dataFrame$X[7], yend = dataFrame$Y[7], colour = "black")) +
+  geom_segment(aes(x = dataFrame$X[8], y = 0, xend = dataFrame$X[8], yend = dataFrame$Y[8], colour = "black")) +
+  scale_x_continuous(breaks = xLabels,
+                     labels = xLabels,
+                     limits = c(0,max(xDelays)),
+                     expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,1000), expand = c(0, 0)) +
+  annotate("text",
+           y = 900,
+           x = max(xDelays) - 250,
+           label = annotateMessage,
+           hjust = 1,
+           family = "serif") +
+  scale_colour_manual(values = c('black')) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin = unit(c(0.1,0.5,0.1,0.5), "cm"),
+        legend.position="none",
+        plot.title = element_text(hjust = 0.5),
+        axis.text = element_text(color = "black"),
+        text=element_text(size=10, family="serif")) +
+  labs(title = "PB-AUC = 0.5876 (Max Delay = 3650)",
+       x = "",
+       y = "")
+
+annotateMessage2 = sprintf("Maximum Area = (%s - %s) * 1000 = %s", 7300, 1, (7300-1) * 1000)
+
+plotDraw2 <- ggplot(dataFrame2, aes(x=X, y=Y, fill="gray")) +
+  geom_line(size=1) +
+  geom_area(aes(x=X, y=Y, fill="gray"), data = dataFrame2) +
+  geom_point() +
+  scale_fill_manual(values = c('gray')) +
+  geom_segment(aes(x = dataFrame2$X[1], y = 0, xend = dataFrame2$X[1], yend = dataFrame2$Y[1], colour = "black")) +
+  geom_segment(aes(x = dataFrame2$X[2], y = 0, xend = dataFrame2$X[2], yend = dataFrame2$Y[2], colour = "black")) +
+  geom_segment(aes(x = dataFrame2$X[3], y = 0, xend = dataFrame2$X[3], yend = dataFrame2$Y[3], colour = "black")) +
+  geom_segment(aes(x = dataFrame2$X[4], y = 0, xend = dataFrame2$X[4], yend = dataFrame2$Y[4], colour = "black")) +
+  geom_segment(aes(x = dataFrame2$X[5], y = 0, xend = dataFrame2$X[5], yend = dataFrame2$Y[5], colour = "black")) +
+  geom_segment(aes(x = dataFrame2$X[6], y = 0, xend = dataFrame2$X[6], yend = dataFrame2$Y[6], colour = "black")) +
+  geom_segment(aes(x = dataFrame2$X[7], y = 0, xend = dataFrame2$X[7], yend = dataFrame2$Y[7], colour = "black")) +
+  geom_segment(aes(x = dataFrame2$X[8], y = 0, xend = dataFrame2$X[8], yend = dataFrame2$Y[8], colour = "black")) +
+  scale_x_continuous(breaks = xLabels2,
+                     labels = xLabels2,
+                     limits = c(0,max(xDelays)),
+                     expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,1000), expand = c(0, 0)) +
+  annotate("text",
+           y = 900,
+           x = max(xDelays) - 250,
+           label = annotateMessage2,
+           hjust = 1,
+           family = "serif") +
+  scale_colour_manual(values = c('black')) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin = unit(c(0.1,0.5,0.1,0.5), "cm"),
+        legend.position="none",
+        plot.title = element_text(hjust = 0.5),
+        axis.text = element_text(color = "black"),
+        text=element_text(size=10, family="serif")) +
+  labs(title = "PB-AUC = 0.4306 (Max Delay = 7300)",
+       x = "",
+       y = "Value")
+
+annotateMessage3 = sprintf("Maximum Area = (%s - %s) * 1000 = %s", 14600, 1, (14600-1) * 1000)
+
+plotDraw3 <- ggplot(dataFrame3, aes(x=X, y=Y, fill="gray")) +
+  geom_line(size=1) +
+  geom_area(aes(x=X, y=Y, fill="gray"), data = dataFrame3) +
+  geom_point() +
+  scale_fill_manual(values = c('gray')) +
+  geom_segment(aes(x = dataFrame3$X[1], y = 0, xend = dataFrame3$X[1], yend = dataFrame3$Y[1], colour = "black")) +
+  geom_segment(aes(x = dataFrame3$X[2], y = 0, xend = dataFrame3$X[2], yend = dataFrame3$Y[2], colour = "black")) +
+  geom_segment(aes(x = dataFrame3$X[3], y = 0, xend = dataFrame3$X[3], yend = dataFrame3$Y[3], colour = "black")) +
+  geom_segment(aes(x = dataFrame3$X[4], y = 0, xend = dataFrame3$X[4], yend = dataFrame3$Y[4], colour = "black")) +
+  geom_segment(aes(x = dataFrame3$X[5], y = 0, xend = dataFrame3$X[5], yend = dataFrame3$Y[5], colour = "black")) +
+  geom_segment(aes(x = dataFrame3$X[6], y = 0, xend = dataFrame3$X[6], yend = dataFrame3$Y[6], colour = "black")) +
+  geom_segment(aes(x = dataFrame3$X[7], y = 0, xend = dataFrame3$X[7], yend = dataFrame3$Y[7], colour = "black")) +
+  geom_segment(aes(x = dataFrame3$X[8], y = 0, xend = dataFrame3$X[8], yend = dataFrame3$Y[8], colour = "black")) +
+  scale_x_continuous(breaks = xLabels3,
+                     labels = xLabels3,
+                     limits = c(0,max(xDelays)),
+                     expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,1000), expand = c(0, 0)) +
+  annotate("text",
+           y = 900,
+           x = max(xDelays) - 250,
+           label = annotateMessage3,
+           hjust = 1,
+           family = "serif") +
+  scale_colour_manual(values = c('black')) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin = unit(c(0.1,0.5,0.1,0.5), "cm"),
+        legend.position="none",
+        plot.title = element_text(hjust = 0.5),
+        axis.text = element_text(color = "black"),
+        text=element_text(size=10, family="serif")) +
+  labs(title = "PB-AUC = 0.3523 (Max Delay = 14600)",
+       x = "Delay",
+       y = "")
+
+par(family = "serif", mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(3, 6,
+                                           heights = unit(c(11), "null"),
+                                           widths = unit(c(8, 8, 8, 8, 8, 8), "null"))))
+
+print(plotDraw,  vp = viewport(layout.pos.row = 1, layout.pos.col = 1:6))
+print(plotDraw2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:6))
+print(plotDraw3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1:6))
+
+```
+
+Note: Examples of how area under curve proportions are affected by both the selection of delay values as well as the degree of discounting. In the subplots above, the overall amount of discounting in each is the same (~75% of value) but the proportion of area under the curve to the maximum area is driven increasingly lower as the maximum delay increases.
+
+### Figure 2
+
+```{r, Figure_2, echo=FALSE, warning=FALSE, cache=TRUE, fig.align="center", fig.height=7, fig.width=9 }
+bottomMargin   <- 0.4
+leftMarginText <- 0.4
+leftMarginBlank<- 0.2
+topMargin <- 0.2
+
+par(mfrow = c(2, 1), oma = c(0, 0, 0, 0), mar=c(2, 2, 2, 0) + 0.1, omi=c(0.2,0.2,0,0))
+
+aucDelays <- c(7,14,30,183,365,1825)
+aucValues <- c(0.995,0.975,0.825,0.8,0.7,0.6)
+
+hypDelays <- seq(1, 9125, length.out = 20000)
+hypValues <- 1 / (1 + 0.002357*hypDelays)
+
+gmDelays <- seq(1, 1825, length.out = 20000)
+gmValues <- 1 / (1 + 0.043864*gmDelays)^0.219506
+
+# Base plot, AUC
+plot(aucDelays, 
+     aucValues,
+     main = "Discounting Results as Reported",
+     log = "x",
+     type = "p",
+     cex = 1.5,
+     pch = 15,
+     xlab = NA,
+     ylab = NA,
+     xaxt = "n",
+     yaxt = "n",
+     xlim = c(1, 10000),
+     ylim = c(0, 1))
+
+# Axes
+atx <- c(1, 10, 100, 1000, 10000)
+labels <- sapply(atx, function(i) as.expression(bquote(.(NA))) )
+axis(1, at=atx, labels=labels)
+
+aty <- c(0, 0.25, 0.5, 0.75, 1)
+labels <- sapply(aty, function(i) as.expression(bquote(.(i))) )
+axis(2, at=aty, labels=labels)
+
+# Lines
+lines(aucDelays, aucValues)
+
+lines(gmDelays, gmValues, col = "lightgray")
+
+lines(hypDelays, hypValues, col = "darkgray")
+
+# Labels
+arrows(1000, 
+       0.825, 
+       x1 = 1000, 
+       y1 = 0.675,
+       code = 2)
+
+text(1000, 0.9, labels = c("Study A"))
+
+arrows(500, 
+       0.25, 
+       x1 = 1000, 
+       y1 = 0.25,
+       code = 2)
+
+text(450, 0.25, 
+     adj = 1,
+     labels = c("Study B"))
+
+arrows(10, 
+       0.725, 
+       x1 = 10, 
+       y1 = 0.9,
+       code = 2)
+
+text(10, 0.65, labels = c("Study C"))
+
+########################################
+
+aucDelays <- c(7,14,30,183,365,1825)
+aucValues <- c(0.995,0.975,0.825,0.8,0.7,0.6)
+
+hypDelays <- seq(7, 1825, length.out = 20000)
+hypValues <- 1 / (1 + 0.002357*hypDelays)
+
+gmDelays <- seq(7, 1825, length.out = 20000)
+gmValues <- 1 / (1 + 0.043864*gmDelays)^0.219506
+
+# Mod plot, AUC
+plot(aucDelays, 
+     aucValues,
+     main = "Discounting Results with Common Bounds",
+     log = "x",
+     type = "p",
+     cex = 1.5,
+     pch = 15,
+     xlab = NA,
+     ylab = NA,
+     xaxt = "n",
+     yaxt = "n",
+     xlim = c(1, 10000),
+     ylim = c(0, 1))
+
+# Axes
+atx <- c(1, 10, 100, 1000, 10000)
+labels <- sapply(atx, function(i) as.expression(bquote(.(i))) )
+axis(1, at=atx, labels=labels)
+
+aty <- c(0, 0.25, 0.5, 0.75, 1)
+labels <- sapply(aty, function(i) as.expression(bquote(.(i))) )
+axis(2, at=aty, labels=labels)
+
+# Lines
+lines(aucDelays, aucValues)
+
+lines(gmDelays, gmValues, col = "lightgray")
+
+lines(hypDelays, hypValues, col = "darkgray")
+
+# Labels
+arrows(1000, 
+       0.825, 
+       x1 = 1000, 
+       y1 = 0.675,
+       code = 2)
+
+text(1000, 0.9, labels = c("Study A"))
+
+arrows(500, 
+       0.25, 
+       x1 = 1000, 
+       y1 = 0.25,
+       code = 2)
+
+text(450, 0.25, 
+     adj = 1,
+     labels = c("Study B"))
+
+arrows(10, 
+       0.725, 
+       x1 = 10, 
+       y1 = 0.9,
+       code = 2)
+
+text(10, 0.65, labels = c("Study C"))
+
+# Description
+
+lines(c(7,7),
+      c(-1,10),
+      lty = 2)
+lines(c(1825,1825),
+      c(-1,10),
+      lty = 2)
+
+mtext(expression(bold('Normalized Value')), side=2, outer=T, at=0.5)
+mtext(expression(bold('Delay')), side=1, line = 2, outer=F, at=100)
+```
+
+Note: These two plots in this figure illustrate how modeled discounting processes can be used to focus on specific delays of interests—even if not directly assessed. The top plot shows the discounting data from three hypothetical experiments. In the bottom plot, the range of delays being targeted has been adjusted to match those from the study using PB-AUC (Study A), which cannot be adjusted.
+
+### Figure 3
+
+```{r, Figure_3, echo=FALSE, warning=FALSE, cache=TRUE, fig.align="center", fig.height=7, fig.width=9 }
+
+
+
+#overall
+#wilcox.test(mVars$NI.AUC, 
+#            mVars$Exact.AUC, correct = FALSE)
+#cor.test(x=mVars$NI.AUC, 
+#         y=mVars$Exact.AUC, method = 'spearman', exact = FALSE)
+
+#Noise
+#wilcox.test(mVars[mVars$Model == "Noise",]$NI.AUC, 
+#            mVars[mVars$Model == "Noise",]$Exact.AUC, correct = FALSE)
+#cor.test(x=mVars[mVars$Model == "Noise",]$NI.AUC, 
+#         y=mVars[mVars$Model == "Noise",]$Exact.AUC, method = 'spearman', exact = FALSE)
+
+#Exponential
+#wilcox.test(mVars[mVars$Model == "Exponential",]$NI.AUC, 
+#            mVars[mVars$Model == "Exponential",]$Exact.AUC, correct = FALSE)
+#cor.test(x=mVars[mVars$Model == "Exponential",]$NI.AUC, 
+#         y=mVars[mVars$Model == "Exponential",]$Exact.AUC, method = 'spearman', exact = FALSE)
+
+#Hyperbolic
+#wilcox.test(mVars[mVars$Model == "Hyperbolic",]$NI.AUC, 
+#            mVars[mVars$Model == "Hyperbolic",]$Exact.AUC, correct = FALSE)
+#cor.test(x=mVars[mVars$Model == "Hyperbolic",]$NI.AUC, 
+#         y=mVars[mVars$Model == "Hyperbolic",]$Exact.AUC, method = 'spearman', exact = FALSE)
+
+#Quasi-Hyperbolic
+#wilcox.test(mVars[mVars$Model == "Quasi-Hyperbolic",]$NI.AUC, 
+#            mVars[mVars$Model == "Quasi-Hyperbolic",]$Exact.AUC, correct = FALSE)
+#cor.test(x=mVars[mVars$Model == "Quasi-Hyperbolic",]$NI.AUC, 
+#         y=mVars[mVars$Model == "Quasi-Hyperbolic",]$Exact.AUC, method = 'spearman', exact = FALSE)
+
+#Myerson-Green
+#wilcox.test(mVars[mVars$Model == "Myerson-Green",]$NI.AUC, 
+#            mVars[mVars$Model == "Myerson-Green",]$Exact.AUC, correct = FALSE)
+#cor.test(x=mVars[mVars$Model == "Myerson-Green",]$NI.AUC, 
+#         y=mVars[mVars$Model == "Myerson-Green",]$Exact.AUC, method = 'spearman', exact = FALSE)
+
+#Rachlin
+#wilcox.test(mVars[mVars$Model == "Rachlin",]$NI.AUC, 
+#            mVars[mVars$Model == "Rachlin",]$Exact.AUC, correct = FALSE)
+#cor.test(x=mVars[mVars$Model == "Rachlin",]$NI.AUC, 
+#         y=mVars[mVars$Model == "Rachlin",]$Exact.AUC, method = 'spearman', exact = FALSE)
+
+#table(file$Model)
+
+fontSize = 3
+xOffset = 0.35
+yOffset = 0.975
+
+lm_eqn = function(m) {
+  
+  l <- list(a = as.numeric(format(coef(m)[1], digits = 3)),
+            b = as.numeric(format(abs(coef(m)[2]), digits = 3)),
+            r2 = format(summary(m)$r.squared, digits = 3));
+  
+  if (coef(m)[2] >= 0)  {
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,l)
+  } else {
+    eq <- substitute(italic(y) == a - b %.% italic(x)*","~~italic(r)^2~"="~r2,l)    
+  }
+  
+  as.character(as.expression(eq));                 
+}
+
+par(family = "serif")
+
+plot0 <- ggplot(mVars[mVars$Model == "Noise", c("NI.AUC", "Exact.AUC")], 
+                aes(x=NI.AUC, y=Exact.AUC)) + 
+  geom_point() +
+  geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+  theme_bw() +
+  annotate("text", 
+           x = xOffset, 
+           y = yOffset, 
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, mVars[mVars$Model == "Noise", 
+                                                       c("NI.AUC", "Exact.AUC")])), 
+           colour="black", 
+           size = fontSize, 
+           parse=TRUE) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text=element_text(size=12, family="serif")) +
+  labs(title = "Noise Model", 
+       x = "",
+       y = "Exact Solution Area")
+
+plot1 <- ggplot(mVars[mVars$Model == "Hyperbolic", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) + 
+  geom_point() +
+  geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+  theme_bw() +
+  annotate("text", 
+           x = xOffset, 
+           y = yOffset, 
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, mVars[mVars$Model == "Hyperbolic", 
+                                                       c("NI.AUC", "Exact.AUC")])), 
+           colour="black", 
+           size = fontSize, 
+           parse=TRUE) +  
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        text=element_text(size=12, family="serif")) +
+  labs(title = "Mazur Model",
+       x = "",
+       y = "Exact Solution Area")
+
+plot2 <- ggplot(mVars[mVars$Model == "Exponential", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) + 
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text", 
+           x = xOffset, 
+           y = yOffset, 
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, mVars[mVars$Model == "Exponential", c("NI.AUC", "Exact.AUC")])), 
+           colour="black", 
+           size = fontSize, 
+           parse=TRUE) +    
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               text=element_text(size=12, family="serif")) +
+         labs(title = "Exponential Model",
+              x = "",
+              y = "Exact Solution Area")
+
+plot3 <- ggplot(mVars[mVars$Model == "Quasi-Hyperbolic", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) + 
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text", 
+           x = xOffset, 
+           y = yOffset, 
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, mVars[mVars$Model == "Quasi-Hyperbolic", c("NI.AUC", "Exact.AUC")])), 
+           colour="black", 
+           size = fontSize, 
+           parse=TRUE) +    
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               text=element_text(size=12, family="serif")) +
+         labs(title = "Quasi-Hyperbolic Model", x = "Numerical Integration Area", y = "Exact Solution Area")
+
+plot4 <- ggplot(mVars[mVars$Model == "Myerson-Green", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) + 
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text", 
+           x = xOffset, 
+           y = yOffset, 
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, mVars[mVars$Model == "Myerson-Green", c("NI.AUC", "Exact.AUC")])), 
+           colour="black", 
+           size = fontSize, 
+           parse=TRUE) +      
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               text=element_text(size=12, family="serif")) +
+         labs(title = "Green Myerson Model", x = "Numerical Integration Area", y = "Exact Solution Area") 
+
+plot5 <- ggplot(mVars[mVars$Model == "Rachlin", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) + 
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text", 
+           x = xOffset, 
+           y = yOffset, 
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, mVars[mVars$Model == "Rachlin", c("NI.AUC", "Exact.AUC")])), 
+           colour="black", 
+           size = fontSize, 
+           parse=TRUE) +       
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               text=element_text(size=12, family="serif")) +
+         labs(title = "Rachlin Model", x = "Numerical Integration Area", y = "Exact Solution Area")
+
+par(family = "serif", mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(2, 6, heights = unit(c(8, 8), "null"))))
+
+print(plot0, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+print(plot1, vp = viewport(layout.pos.row = 1, layout.pos.col = 3:4))
+print(plot2, vp = viewport(layout.pos.row = 1, layout.pos.col = 5:6))
+
+print(plot3, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:2))
+print(plot4, vp = viewport(layout.pos.row = 2, layout.pos.col = 3:4))
+print(plot5, vp = viewport(layout.pos.row = 2, layout.pos.col = 5:6))
+
+```
+
+Note: These plots depict the relationship between numerical integration and exact solutions for calculating MB-AUC.
+
+### Figure 4
+
+``` {r, Figure_4, echo=FALSE, warning=FALSE, cache=TRUE, fig.align="center", fig.height=6, fig.width=6 }
+
+delayVector <- seq(0, 365, by = 0.1)
+
+# Reynolds et al.
+
+delays <- c(1, 2, 30, 180, 365)
+reynoldsSmokers <- c(0.846916079, 0.750327525,0.22421986, 0.098844224, 0.049121418)
+reynoldsNonSmokers <- c(0.952414436, 0.950926694, 0.525856007, 0.098844224, 0.150162097)
+
+# Friedel
+
+friedelSmokers <- 1/((1+3.28*delayVector)^0.3)
+friedelNonsmokers <- 1/((1+0.004*delayVector)^3.61)
+
+# Bickel
+
+bickelSmokers <- 1/(1+0.05414*delayVector)
+bickelNonsmokers <- 1/(1+0.0073*delayVector)
+
+# Mitchell
+
+mitchellSmokers <- 1/(1+0.012*delayVector)
+mitchellNonsmokers <- 1/(1+0.006*delayVector)
+
+# reynoldsCurve
+
+reynoldsCurveSmokers <- 1/(1+0.075*delayVector)
+reynoldsCurveNonsmokers <- 1/(1+0.014*delayVector)
+
+pointSize <- 1.25
+lineWidth <- 1.5
+
+minX <- 0
+maxX <- 400
+
+middleGray <- "#636363"
+lightestGray <- "#cccccc"
+laststGray <- "#e5e5e5"
+endGray <- "#efefef"
+
+xLab <- "Delay (Days)"
+yLab <- "Value (Proportional)"
+
+pTitle <- "Combined PB-AUC and Adjusted MB-AUC Measures"
+
+par(family = "serif", mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+
+plot(delays, 
+     reynoldsSmokers, 
+     type = 'o',
+     col = 'black',
+     pch = 15,
+     cex = pointSize,
+     cex.lab = 1.25,
+     cex.axis = 1.25,
+     cex.main = 0.1,
+     lty = 1,
+     lwd = lineWidth,
+     main = NA,
+     family = "serif",
+     xlab = xLab,
+     ylab = yLab,
+     xlim = c(minX, maxX),
+     ylim = c(0, 1.0))
+
+points(delays,
+       reynoldsNonSmokers,
+       type = 'o',
+       col = 'black',
+       pch = 22,
+       lty = 2,
+       lwd = lineWidth,
+       cex = pointSize)
+
+lines(delayVector,
+      friedelSmokers,
+      type = 'l',
+      col = middleGray,
+      lwd = lineWidth,
+      lty = 1)
+
+lines(delayVector,
+      friedelNonsmokers,
+      type = 'l',
+      col = middleGray,
+      lwd = lineWidth,
+      lty = 2)
+
+lines(delayVector,
+      bickelSmokers,
+      type = 'l',
+      col = lightestGray,
+      lwd = lineWidth,
+      lty = 1)
+
+lines(delayVector,
+      bickelNonsmokers,
+      type = 'l',
+      col = lightestGray,
+      lwd = lineWidth,
+      lty = 2)
+
+lines(delayVector,
+      mitchellSmokers,
+      type = 'l',
+      col = laststGray,
+      lwd = lineWidth,
+      lty = 1)
+
+lines(delayVector,
+      mitchellNonsmokers,
+      type = 'l',
+      col = laststGray,
+      lwd = lineWidth,
+      lty = 2)
+
+lines(delayVector,
+      reynoldsCurveSmokers,
+      type = 'l',
+      col = endGray,
+      lwd = lineWidth,
+      lty = 1)
+
+lines(delayVector,
+      reynoldsCurveNonsmokers,
+      type = 'l',
+      col = endGray,
+      lwd = lineWidth,
+      lty = 2)
+
+legend(
+  "topright", 
+  bty = "n",
+  lty = c(NA, 
+          1, 1, 1, 1, 1,
+          NA, NA,
+          2, 2, 2, 2, 2), 
+  lwd = rep(lineWidth, 9),
+  cex = 0.75,
+  text.font = c(2,1,1,1,1,1,1,2,1,1,1,1,1),
+  col = c("black",
+          "black", middleGray, lightestGray, laststGray, endGray,
+          "black", "black", 
+          "black", middleGray, lightestGray, laststGray, endGray), 
+  legend = c("Smokers",
+             "Reynolds et al. (2007);  PB-AUC = 0.156", 
+             "Friedel et al. (2014); Myerson-Green MB-AUC = 0.167", 
+             "Bickel et al. (1999); Mazur MB-AUC = 0.151", 
+             "Mitchell et al. (1999); Mazur MB-AUC = 0.382",
+             "Reynolds et al. (2004); Mazur MB-AUC = 0.119",
+             "",
+             "Nonsmokers",
+             "Reynolds et al. (2007); PB-AUC = 0.323",  
+             "Friedel et al. (2014); Myerson-Green MB-AUC = 0.235",
+             "Bickel et al. (1999); Mazur MB-AUC = 0.486",
+             "Mitchell et al. (1999); Mazur MB-AUC = 0.528",
+             "Reynolds et al. (2004); Mazur MB-AUC = 0.352")
+)
+
+```
+
+This plot illustrates the relationship between PB-AUC and MB-AUC when MB-AUC is adjusted to reflect the delays from the PB-AUC. 
+
