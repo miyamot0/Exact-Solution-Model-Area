@@ -1,0 +1,1078 @@
+---
+title: "Exact-Solution-Model-Area"
+author: "Shawn Gilroy"
+date: "09/05/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(cowplot)
+library(effsize)
+library(extrafont)
+library(ggplot2)
+library(nlstools)
+library(nlraa)
+library(patchwork)
+
+source("BootstrappingAUC.R", local = TRUE)
+
+sim_values <- read.csv("Sim Comparisons.csv", 
+                       stringsAsFactors = FALSE)
+
+fontSize = 4
+xOffset = 0.4
+yOffset = 0.975
+seed <- 8464
+errDev <- 0.01
+
+lm_eqn = function(m) {
+
+  l <- list(a = as.numeric(format(coef(m)[1], digits = 2)),
+            b = as.numeric(format(abs(coef(m)[2]), digits = 2)),
+            r2 = format(summary(m)$r.squared, digits = 3));
+
+  if (coef(m)[2] >= 0)  {
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,l)
+  } else {
+    eq <- substitute(italic(y) == a - b %.% italic(x)*","~~italic(r)^2~"="~r2,l)
+  }
+
+  as.character(as.expression(eq));
+}
+
+```
+
+```{r draw_fig_1, fig.width=7.5, fig.height=5, dpi=600, warning=FALSE, message=FALSE}
+
+draw_fig_1 <- function(data_frame,
+                       x_labels,
+                       x_delays,
+                       annot_message,
+                       plot_title,
+                       x_lab = "",
+                       y_lab = "") {
+
+  ggplot(
+    data_frame, aes(
+      x = X, 
+      y = Y, 
+      fill = "gray"
+    )
+  ) +
+  geom_line(size = 1, linetype = 1) +
+  geom_area() +
+  geom_point() +
+  scale_fill_manual(values = c('gray')) +
+  geom_segment(aes(
+    x = data_frame[1, "X"],
+    y = 0,
+    xend = data_frame[1, "X"],
+    yend = data_frame[1, "Y"],
+    colour = "black")
+  ) +
+  geom_segment(aes(
+    x = data_frame[2, "X"],
+    y = 0,
+    xend = data_frame[2, "X"],
+    yend = data_frame[2, "Y"],
+    colour = "black"
+    )
+  ) +
+  geom_segment(aes(
+    x = data_frame[3, "X"],
+    y = 0,
+    xend = data_frame[3, "X"],
+    yend = data_frame[3, "Y"],
+    colour = "black"
+    )
+  ) +
+  geom_segment(aes(
+    x = data_frame[4, "X"],
+    y = 0,
+    xend = data_frame[4, "X"],
+    yend = data_frame[4, "Y"],
+    colour = "black"
+    )
+  ) +
+  geom_segment(aes(
+    x = data_frame[5, "X"],
+    y = 0,
+    xend = data_frame[5, "X"],
+    yend = data_frame[5, "Y"],
+    colour = "black"
+    )
+  ) +
+  geom_segment(aes(
+    x = data_frame[6, "X"],
+    y = 0,
+    xend = data_frame[6, "X"],
+    yend = data_frame[6, "Y"],
+    colour = "black"
+    )
+  ) +
+  geom_segment(aes(
+    x = data_frame[7, "X"],
+    y = 0,
+    xend = data_frame[7, "X"],
+    yend = data_frame[7, "Y"],
+    colour = "black"
+    )
+  ) +
+  geom_segment(aes(
+    x = data_frame[8, "X"],
+    y = 0,
+    xend = data_frame[8, "X"],
+    yend = data_frame[8, "Y"],
+    colour = "black"
+    )
+  ) +
+  scale_x_continuous(
+    breaks = x_labels,
+    labels = x_labels,
+    limits = c(0, max(x_delays)),
+    expand = c(0, 0)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1000), 
+    expand = c(0, 0)
+  ) +
+  annotate(
+    "text",
+    y = 900,
+    x = max(x_delays) - 250,
+    label = annot_message,
+    hjust = 1,
+    family = "Times New Roman") +
+  scale_colour_manual(values = c('black')) +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.margin = unit(c(0.1, 0.5, 0.1, 0.5), "cm"),
+    legend.position = "none",
+    axis.line = element_line(colour = "black"),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+    axis.text = element_text(color = "black", family = "Times New Roman"),
+    text = element_text(size = 10, family = "Times New Roman")) +
+  labs(
+    title = plot_title,
+    x = x_lab,
+    y = y_lab
+  )
+}
+
+```
+
+Change log:
+
+- 11/13/2022: Updated pre-print 
+
+- 9/5/2019: Archived pre-print
+
+## Figure 1
+
+```{r figure_1, warning=FALSE}
+
+x_labels1 <- c(
+  1,NA,NA,365,1825,3650, NA, NA
+)
+x_labels2 <- c(
+  1,NA,NA,365,1825,3650, 7300, NA
+)
+x_labels3 <- c(
+  1,NA,NA,365,1825,3650, 7300, 14600
+)
+
+x_delays <- c(
+  1,30,180,365,1825,3650, 7300, 14600
+)
+
+data_frame_1 <- data.frame(
+  X = x_delays,
+  Y = c(945,855,845,750,636,274,NA,NA)
+)
+
+data_frame_2 <- data.frame(
+  X = x_delays,
+  Y = c(945,855,845,750,636,274,274,NA)
+)
+
+data_frame_3 <- data.frame(
+  X = x_delays,
+  Y = c(945,855,845,750,636,274,274,274)
+)
+
+annotateMessage = sprintf(
+  "Maximum Area = (%s - %s) * 1000 = %s", 
+  3650, 
+  1, 
+  (3650 - 1) * 1000
+)
+
+p1 <- draw_fig_1(
+  data_frame_1,
+  x_labels1,
+  x_delays,
+  sprintf(
+    "Maximum Area = (%s - %s) * 1000 = %s", 
+    3650, 
+    1, 
+    (3650 - 1) * 1000
+  ),
+  "PB-AUC = 0.5876 (Max Delay = 3650)"
+)
+
+p2 <- draw_fig_1(
+  data_frame_2,
+  x_labels2,
+  x_delays,
+  sprintf(
+    "Maximum Area = (%s - %s) * 1000 = %s", 
+    7300,
+    1,
+    (7300 - 1) * 1000
+  ),
+  "PB-AUC = 0.4306 (Max Delay = 7300)",
+  "",
+  "Value"
+)
+
+p3 <- draw_fig_1(
+  data_frame_3,
+  x_labels3,
+  x_delays,
+  sprintf(
+    "Maximum Area = (%s - %s) * 1000 = %s", 
+    14600, 
+    1, 
+    (14600 - 1) * 1000
+  ),
+  "PB-AUC = 0.3523 (Max Delay = 14600)",
+  "Delay",
+  ""
+)
+
+plot_grid(p1, 
+          p2,
+          p3,
+          align = "hv",
+          label_size = 14,
+          label_fontfamily = "Times New Roman",
+          nrow = 3)
+
+```
+
+## Figure 2
+
+```{r figure_2, warning=FALSE, fig.width=9, fig.height=6, dpi=600}
+
+resample_size <- 10000
+
+lightest_gray = "#CCCCCC"
+medium_gray = "#999999"
+dark_gray = "#333333"
+
+mazur_integral <- function(A, k, time) {
+  (A * log(1 + k*time))/k
+}
+
+mazur_MBAUC <- function(k) {
+  d1 = 1
+  d2 = 360
+
+  t1 = mazur_integral(1, k, d1)
+  t2 = mazur_integral(1, k, d2)
+
+  range = (d2 - d1)
+
+  (t2 - t1)/range
+}
+
+generate_fits <- function(df) {
+  results <- nls(Value ~ 1/(1 + k * Delay),
+                 data = df)
+
+  k = coef(summary(results))[1]
+  se = coef(summary(results))[2]
+
+  k_range <- rnorm(resample_size, k, se)
+  auc_range <- mazur_MBAUC(k_range)
+
+  plotFrameHisto <- data.frame(
+    AUC = auc_range,
+    ID = rep(df$ID[1], length(auc_range)),
+    k = rep(k, length(auc_range)),
+    se = rep(se, length(auc_range))
+  )
+
+  plotFrameHisto
+}
+
+generateSlopes <- function(df) {
+  data_frame_fits_all <- data.frame(
+    Delays = numeric(0),
+    Values = numeric(0),
+    ID = character(0)
+  )
+
+  delayValues <- 1:360
+
+  for (id in unique(df$ID)) {
+    local_frame <- df[df$ID == id,]
+    results <- nls(Value ~ 1/(1 + k * Delay),
+                   start = list(k = 0.002),
+                   data = local_frame)
+
+    k = coef(summary(results))[1]
+
+    data_frame_fits <- data.frame(
+      Delays = delayValues,
+      Values = 1/(1 + k * delayValues)
+    )
+    data_frame_fits$ID <- id
+
+    data_frame_fits_all <- rbind(data_frame_fits_all,
+                              data_frame_fits)
+  }
+
+  data_frame_fits_all
+}
+
+ids <- c("Moderate", "Steep", "Shallow")
+delay_range <- c(1,7,14,30,60,120, 360)
+lengthDelay <- length(delay_range)
+
+data_frame_example <- data.frame(
+  ID = c(rep(ids[1], lengthDelay),
+         rep(ids[2], lengthDelay),
+         rep(ids[3], lengthDelay)),
+  Delay = rep(delay_range, 3),
+  Value = c(1.0, 0.9,  0.8,   0.65,   0.65,  0.4,  0.2,
+            1.0, 0.8,  0.75,  0.65,  0.35,  0.325,  0.05,
+            1.0, 0.95, 0.9,   0.8,   0.75,  0.55,  0.35)
+)
+
+holder_frame <- data.frame(
+  AUC = numeric(0),
+  ID = numeric(0)
+)
+
+for (id in unique(data_frame_example$ID)) {
+  local_frame <- data_frame_example[data_frame_example$ID == id,]
+  local_fits <- generate_fits(local_frame)
+
+  holder_frame <- rbind(holder_frame,
+                       local_fits)
+}
+
+holder_frame$ID = factor(holder_frame$ID,
+                        levels = c("Shallow",
+                                   "Moderate",
+                                   "Steep"))
+
+
+data_frame_example$ID = factor(
+  as.character(data_frame_example$ID),
+  levels = c(
+    "Shallow",
+    "Moderate",
+    "Steep"
+  )
+)
+
+data_frame_example <- data_frame_example[order(data_frame_example$ID),]
+
+predictions <- generateSlopes(data_frame_example)
+
+predictions$ID = factor(predictions$ID,
+                        levels = c("Shallow",
+                                   "Moderate",
+                                   "Steep"))
+
+p0 <- ggplot(predictions, 
+             aes(
+               x = Delays, 
+               y = Values, 
+               color = ID
+              )
+            ) +
+  ylab("Subjective Value") +
+  geom_line() +
+  geom_point(
+    data = data_frame_example,
+    size = 3,
+    mapping = aes(Delay, Value, color = ID)) +
+  theme_bw() +
+  scale_color_manual(
+    values = c(lightest_gray, medium_gray, 'black')) +
+  scale_y_continuous(
+    expand = c(0, 0),
+    limits = c(0, 1.05),
+    breaks = c(0, .5, 1)
+  ) +
+  scale_x_continuous(
+    expand = c(0, 0),
+    limits = c(0, 400),
+    breaks = c(0, 100, 200, 300, 400)
+  ) +
+  theme(
+    legend.position = "bottom",
+    axis.line = element_line(colour = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.margin = unit(c(0.75,0.5,0.1,0.5), "cm"),
+    plot.title = element_text(hjust = 0.5, family = "times New Roman"),
+    axis.text = element_text(size = 12,
+                             color = "black",
+                             family = "times New Roman"),
+    text = element_text(size = 12,
+                        family = "times New Roman")
+  )
+
+p1 <- ggplot(holder_frame, 
+             aes(x = AUC, ..scaled.., fill = ID)) +
+  xlim(0, 1) +
+  ylab("Density") +
+  xlab("MB-AUC Ratio") +
+  geom_density(alpha = .2) +
+  facet_wrap(~ID, nrow = 3) +
+  theme_bw() +
+  scale_color_manual(values = c(lightest_gray, medium_gray, 'black')) +
+  scale_fill_manual(values = c(lightest_gray, medium_gray, 'black')) +
+  geom_hline(yintercept = 0) +
+  scale_y_continuous(
+    expand = c(0,0),
+    limits = c(0, 1.05),
+    breaks = c(0, 1)
+  ) +
+  theme(
+    legend.position = "none",
+    axis.line = element_line(colour = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    plot.background = element_blank(),
+    plot.margin = unit(c(0.1,0.5,0.1,0.5), "cm"),
+    plot.title = element_text(hjust = 0.5, family = "times New Roman"),
+    axis.text = element_text(size = 12,
+                             color = "black",
+                             family = "times New Roman"),
+    strip.text = element_text(size = 12,
+                              color = "black",
+                              family = "times New Roman"),
+    strip.background = element_blank(),
+    text = element_text(size = 12,
+                        family = "times New Roman")
+  )
+
+p0 + inset_element(p1,
+                   left = 0.35,   right = 1,
+                   bottom = 0.5, top = 1)
+
+```
+
+## Figure 3
+
+```{r figure_3, warning=FALSE, fig.width=8, fig.height=4, dpi=600}
+
+study_a_delays = c(7, 14, 30, 183, 365, 1825)
+study_a <- data.frame(X = study_a_delays,
+                     Y = c(0.995,
+                           0.975,
+                           0.825,
+                           0.800,
+                           0.700,
+                           0.600))
+study_a$study = "A"
+
+study_b_delays = 1:9125
+study_b <- data.frame(X = study_b_delays,
+                     Y = (1/(1 + 0.002357 * study_b_delays)))
+study_b$study = "B"
+
+study_c_delays = 1:1825
+study_c <- data.frame(X = study_c_delays,
+                     Y = (1/(1 + 0.043864 * study_c_delays)^0.219506))
+study_c$study = "C"
+
+sumRows <- rbind(study_a, study_b, study_c)
+
+p1 <- ggplot(sumRows, 
+  aes(
+    x = X, 
+    y = Y, 
+    color = study
+    )
+  ) +
+  xlim(0, 9125) +
+  ylim(0, 1) +
+  ggtitle("Unbounded Delays") +
+  ylab("Subjective Value") +
+  xlab("Delay") +
+  geom_point(data = study_a) +
+  geom_line() +
+  geom_segment(aes(x = 1825,
+                   y = 0,
+                   xend = 1825,
+                   yend = 0.6),
+               colour = "black",
+               lty = 2) +
+  scale_color_manual(name = "Study Data",
+                      values = c("black", medium_gray, lightest_gray),
+                      labels = c("Study A: PB-AUC",
+                                 "Study B: Hyperbolic Model",
+                                 "Study C: Green-Myerson Model")) +
+  theme_bw() +
+  theme(legend.position = c(0.7, 0.7),
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman"))
+
+p2 <- ggplot(sumRows, aes(x = X, y = Y, color = study)) +
+  xlim(0, 1825) +
+  ylim(0, 1)+
+  ggtitle("Bounded Delays") +
+  ylab("") +
+  xlab("Delay") +
+  geom_point(data = study_a) +
+  geom_line() +
+  scale_color_manual(name = "study Data",
+                     values =c("black", medium_gray, lightest_gray),
+                     labels = c("study A: PB-AUC",
+                                "study B: Hyperbolic Model",
+                                "study C: Green-Myerson Model")) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman"))
+
+plot_grid(p1,p2,
+          align = "hv",
+          label_size = 14,
+          label_fontfamily = "Times New Roman",
+          nrow = 1)
+
+```
+
+## Figure 4
+
+```{r figure_4_stats}
+
+#overall
+wilcox.test(sim_values$NI.AUC,
+            sim_values$Exact.AUC, correct = FALSE)
+
+cor.test(x = sim_values$NI.AUC,
+         y = sim_values$Exact.AUC, method = 'spearman', 
+         exact = FALSE)
+
+#Noise
+wilcox.test(sim_values[sim_values$Model == "Noise", "NI.AUC"],
+            sim_values[sim_values$Model == "Noise", "Exact.AUC"], 
+            correct = FALSE)
+
+cor.test(x = sim_values[sim_values$Model == "Noise", "NI.AUC"],
+         y = sim_values[sim_values$Model == "Noise", "Exact.AUC"], 
+         method = 'spearman', exact = FALSE)
+
+#Exponential
+wilcox.test(sim_values[sim_values$Model == "Exponential", "NI.AUC"],
+            sim_values[sim_values$Model == "Exponential", "Exact.AUC"], 
+            correct = FALSE)
+
+cor.test(x = sim_values[sim_values$Model == "Exponential", "NI.AUC"],
+         y = sim_values[sim_values$Model == "Exponential", "Exact.AUC"], 
+         method = 'spearman', 
+         exact = FALSE)
+
+#Hyperbolic
+wilcox.test(sim_values[sim_values$Model == "Hyperbolic", "NI.AUC"],
+            sim_values[sim_values$Model == "Hyperbolic", "Exact.AUC"], 
+            correct = FALSE)
+
+cor.test(x = sim_values[sim_values$Model == "Hyperbolic", "NI.AUC"],
+         y = sim_values[sim_values$Model == "Hyperbolic", "Exact.AUC"], 
+         method = 'spearman', 
+         exact = FALSE)
+
+#Quasi-Hyperbolic
+wilcox.test(sim_values[sim_values$Model == "Quasi-Hyperbolic", "NI.AUC"],
+            sim_values[sim_values$Model == "Quasi-Hyperbolic", "Exact.AUC"], 
+            correct = FALSE)
+
+cor.test(x = sim_values[sim_values$Model == "Quasi-Hyperbolic", "NI.AUC"],
+         y = sim_values[sim_values$Model == "Quasi-Hyperbolic", "Exact.AUC"], 
+         method = 'spearman', 
+         exact = FALSE)
+
+
+#Myerson-Green
+wilcox.test(sim_values[sim_values$Model == "Myerson-Green", "NI.AUC"],
+            sim_values[sim_values$Model == "Myerson-Green", "Exact.AUC"], 
+            correct = FALSE)
+
+cor.test(x = sim_values[sim_values$Model == "Myerson-Green", "NI.AUC"],
+         y = sim_values[sim_values$Model == "Myerson-Green", "Exact.AUC"], 
+         method = 'spearman', 
+         exact = FALSE)
+
+#Rachlin
+wilcox.test(sim_values[sim_values$Model == "Rachlin", "NI.AUC"],
+            sim_values[sim_values$Model == "Rachlin", "Exact.AUC"], 
+            correct = FALSE)
+
+cor.test(x = sim_values[sim_values$Model == "Rachlin", "NI.AUC"],
+         y = sim_values[sim_values$Model == "Rachlin", "Exact.AUC"], 
+         method = 'spearman', 
+         exact = FALSE)
+
+
+```
+
+```{r figure_4, fig.width=4.5, fig.height=4, message=FALSE}
+
+ggplot(sim_values[, c("NI.AUC", "Exact.AUC")],
+                aes(x=NI.AUC, y=Exact.AUC)) +
+  geom_point() +
+  geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+  theme_bw() +
+  annotate("text",
+           x = 0.25,
+           y = 1,
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, sim_values[,c("NI.AUC", "Exact.AUC")])),
+           colour="black",
+           family = "Times New Roman",
+           size = fontSize,
+           parse=TRUE) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman")) +
+  labs(x = "Numerical Integration Area",
+       y = "Exact Solution Area")
+
+```
+
+## Figure 5
+
+```{r figure_5, fig.width=9, fig.height=6, message=FALSE}
+
+plot0 <- ggplot(sim_values[sim_values$Model == "Noise", c("NI.AUC", "Exact.AUC")],
+                aes(x=NI.AUC, y=Exact.AUC)) +
+  geom_point() +
+  geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+  theme_bw() +
+  annotate("text",
+           x = xOffset,
+           y = yOffset,
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, sim_values[sim_values$Model == "Noise",
+                                                       c("NI.AUC", "Exact.AUC")])),
+           colour="black",
+           family = "Times New Roman",
+           size = fontSize,
+           parse=TRUE) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman")) +
+  labs(title = "Noise Model",
+       x = "",
+       y = "Exact Solution Area")
+
+plot1 <- ggplot(sim_values[sim_values$Model == "Hyperbolic", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) +
+  geom_point() +
+  geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+  theme_bw() +
+  annotate("text",
+           x = xOffset,
+           y = yOffset,
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, sim_values[sim_values$Model == "Hyperbolic",
+                                                       c("NI.AUC", "Exact.AUC")])),
+           colour="black",
+           family = "Times New Roman",
+           size = fontSize,
+           parse=TRUE) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman")) +
+  labs(title = "Mazur Model",
+       x = "",
+       y = "")
+
+plot2 <- ggplot(sim_values[sim_values$Model == "Exponential", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) +
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text",
+           x = xOffset,
+           y = yOffset,
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, sim_values[sim_values$Model == "Exponential", c("NI.AUC", "Exact.AUC")])),
+           colour="black",
+           family = "Times New Roman",
+           size = fontSize,
+           parse=TRUE) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman")) +
+         labs(title = "Exponential Model",
+              x = "",
+              y = "")
+
+plot3 <- ggplot(sim_values[sim_values$Model == "Quasi-Hyperbolic", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) +
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text",
+           x = xOffset,
+           y = yOffset,
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, sim_values[sim_values$Model == "Quasi-Hyperbolic", c("NI.AUC", "Exact.AUC")])),
+           colour="black",
+           family = "Times New Roman",
+           size = fontSize,
+           parse=TRUE) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman")) +
+         labs(title = "Quasi-Hyperbolic Model",
+              x = "",
+              y = "Exact Solution Area")
+
+plot4 <- ggplot(sim_values[sim_values$Model == "Myerson-Green", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) +
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text",
+           x = xOffset,
+           y = yOffset,
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, sim_values[sim_values$Model == "Myerson-Green", c("NI.AUC", "Exact.AUC")])),
+           colour="black",
+           family = "Times New Roman",
+           size = fontSize,
+           parse=TRUE) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman")) +
+         labs(title = "Green Myerson Model",
+              x = "Numerical Integration Area",
+              y = "")
+
+plot5 <- ggplot(sim_values[sim_values$Model == "Rachlin", c("NI.AUC", "Exact.AUC")], aes(x=NI.AUC, y=Exact.AUC)) +
+         geom_point() +
+         geom_smooth(method = "lm", colour = "gray", se = FALSE) +
+         theme_bw() +
+  annotate("text",
+           x = xOffset,
+           y = yOffset,
+           label = lm_eqn(lm(Exact.AUC ~ NI.AUC, sim_values[sim_values$Model == "Rachlin", c("NI.AUC", "Exact.AUC")])),
+           colour="black",
+           family = "Times New Roman",
+           size = fontSize,
+           parse=TRUE) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman")) +
+         labs(title = "Rachlin Model",
+              x = "",
+              y = "")
+
+plot_grid(plot0,plot1,plot2,
+          plot3,plot4,plot5,
+          align = "hv",
+          label_size = 14,
+          label_fontfamily = "Times New Roman",
+          nrow = 2,
+          ncol = 3)
+
+```
+
+## Figure 6
+
+```{r figure_6, fig.width=8, fig.height=6, warning=FALSE, message=FALSE}
+
+nSims <- 10000
+
+bickelDelayPoints    <- c(7, 14, 30, 183, 365, 365*5, 365*25)
+trueBickelSmokers    <- 0.05414
+trueBickelNonsmokers <- 0.0073
+
+bickelSmokers = simulateHyperbolicFit(trueValues = c(trueBickelSmokers),
+                                      nSims = nSims,
+                                      delayValues = bickelDelayPoints,
+                                      study = "Bickel et al. (1999)",
+                                      model = "Hyperbolic",
+                                      group = "Smokers")
+
+bickelNonsmokers = simulateHyperbolicFit(trueValues = c(trueBickelNonsmokers),
+                                      nSims = nSims,
+                                      delayValues = bickelDelayPoints,
+                                      study = "Bickel et al. (1999)",
+                                      model = "Hyperbolic",
+                                      group = "Non-smokers")
+
+mitchellDelayPoints    <- c(0, 7, 30, 90, 180, 365)
+trueMitchellSmokers    <- 0.012
+trueMitchellNonsmokers <- 0.006
+
+mitchellSmokers = simulateHyperbolicFit(trueValues = c(trueMitchellSmokers),
+                                        nSims = nSims,
+                                        delayValues = mitchellDelayPoints,
+                                        study = "Mitchell et al. (1999)",
+                                        model = "Hyperbolic",
+                                        group = "Smokers")
+
+mitchellNonsmokers = simulateHyperbolicFit(trueValues = c(trueMitchellNonsmokers),
+                                           nSims = nSims,
+                                           delayValues = mitchellDelayPoints,
+                                           study = "Mitchell et al. (1999)",
+                                           model = "Hyperbolic",
+                                           group = "Non-smokers")
+
+reynoldsDelayPoints    <- c(1, 2, 30, 180, 365)
+trueReynoldsSmokers    <- 0.075
+trueReynoldsNonsmokers <- 0.014
+
+reynoldsSmokers = simulateHyperbolicFit(trueValues = c(trueReynoldsSmokers),
+                                        nSims = nSims,
+                                        delayValues = reynoldsDelayPoints,
+                                        study = "Reynolds et al. (2004)",
+                                        model = "Hyperbolic",
+                                        group = "Smokers")
+
+reynoldsNonsmokers = simulateHyperbolicFit(trueValues = c(trueReynoldsNonsmokers),
+                                           nSims = nSims,
+                                           delayValues = reynoldsDelayPoints,
+                                           study = "Reynolds et al. (2004)",
+                                           model = "Hyperbolic",
+                                           group = "Non-smokers")
+
+trueKFriedelSmokers <- 3.28
+trueSFriedelSmokers <- 0.3
+
+trueKFriedelNonsmokers <- 0.004
+trueSFriedelNonsmokers <- 3.61
+
+friedelSmokers = simulateMyersonGreenFit(trueValues = c(trueKFriedelSmokers,
+                                                        trueSFriedelSmokers),
+                                        nSims = nSims,
+                                        delayValues = bickelDelayPoints,
+                                        study = "Friedel et al. (2014)",
+                                        model = "Green-Myerson",
+                                        group = "Smokers")
+
+friedelNonsmokers = simulateMyersonGreenFit(trueValues = c(trueKFriedelNonsmokers,
+                                                           trueSFriedelNonsmokers),
+                                            nSims = nSims,
+                                            delayValues = bickelDelayPoints,
+                                            study = "Friedel et al. (2014)",
+                                            model = "Green-Myerson",
+                                            group = "Non-smokers")
+
+#### PB-AUC, Reynolds et al.
+
+reynoldsPBAUCsmokers = c(0.156)
+reynoldsPBAUCNonSmokers = c(0.323)
+
+reynoldsPBAUCSmokers = simulatePBAUCFit(trueValues = reynoldsPBAUCsmokers,
+                                        nSims = nSims,
+                                        sd = 0.05,
+                                        study = "Reynolds et al. (2007)",
+                                        model = "PBAUC",
+                                        group = "Smokers")
+
+reynoldsPBAUCNonsmokers = simulatePBAUCFit(trueValues = reynoldsPBAUCNonSmokers,
+                                        nSims = nSims,
+                                        sd = 0.1,
+                                        study = "Reynolds et al. (2007)",
+                                        model = "PBAUC",
+                                        group = "Non-smokers")
+
+#####
+
+totalFrame <- rbind(bickelSmokers, bickelNonsmokers,
+                    mitchellSmokers, mitchellNonsmokers,
+                    reynoldsSmokers, reynoldsNonsmokers,
+                    friedelSmokers, friedelNonsmokers,
+                    reynoldsPBAUCSmokers, reynoldsPBAUCNonsmokers)
+
+lineDraws <- data.frame(
+  Status = c("Smokers", "Non-smokers"),
+  SSim = rep(NA, 2),
+  KSim = rep(NA, 2),
+  MBAUC = c(.156, .323)
+)
+
+gray1 = "#EEEEEE"
+gray2 = "#CCCCCC"
+gray3 = "#999999"
+gray4 = "#333333"
+gray5 = "#000000"
+
+p1 <- ggplot(totalFrame, aes(AUC, ..scaled..,
+                             fill = Group, group= interaction(Group, Study))) +
+  xlim(0, 1) +
+  ylab("Scaled Densities") +
+  xlab("AUC Ratio") +
+  scale_fill_manual(values = c(gray5, gray1)) +
+  scale_y_continuous(limits = c(0, 1),
+                     breaks = c(0, 0.5, 1)) +
+  geom_density(alpha = 0.4) +
+  annotate("segment",
+           x=-Inf,
+           xend=Inf,
+           y=0,
+           yend=0) +
+  facet_wrap(~Study, nrow = 5) +
+  theme(legend.position = 'bottom',
+        axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.margin = unit(c(0.2,0.5,0.2,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5, family = "Times New Roman"),
+        axis.text = element_text(size = 12,
+                                 color = "black",
+                                 family = "Times New Roman"),
+        strip.text = element_text(size = 12,
+                                  color = "black",
+                                  family = "Times New Roman"),
+        strip.background = element_blank(),
+        text = element_text(size = 12,
+                            family = "Times New Roman"))
+
+plot_grid(p1,
+          align = "hv",
+          label_size = 14,
+          label_fontfamily = "Times New Roman",
+          nrow = 1,
+          ncol = 1)
+
+clinical <- totalFrame[totalFrame$Group == "Smokers", "AUC"]
+controls <- totalFrame[totalFrame$Group == "Non-smokers", "AUC"]
+
+cohen.d(clinical, controls, na.rm = TRUE)
+
+```
